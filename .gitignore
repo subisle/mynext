@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+
+# 云开发本地
+miniprogram_npm/
+
+# 环境与密钥
+.env
+*.env.local
+private.*
+
+# 微信开发者工具
+project.private.config.json
