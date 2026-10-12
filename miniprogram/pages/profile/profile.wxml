@@ -1,0 +1,29 @@
+<view class="container">
+  <view class="card">
+    <view class="section-title">基础情况</view>
+    <input class="ipt" placeholder="昵称或称呼" value="{{basic.nickname}}" bindinput="onInput" data-path="basic.nickname" />
+    <input class="ipt" placeholder="出生年代，如 1995" value="{{basic.birthDecade}}" bindinput="onInput" data-path="basic.birthDecade" />
+    <input class="ipt" placeholder="所在城市（自愿）" value="{{basic.city}}" bindinput="onInput" data-path="basic.city" />
+    <textarea class="ipt ta" placeholder="备注（选填）：任何想让 AI 知道的补充" value="{{basic.note}}" bindinput="onInput" data-path="basic.note" />
+  </view>
+
+  <view class="card">
+    <view class="section-title">教育与职业</view>
+    <input class="ipt" placeholder="教育经历，如：二本计算机 2017 毕业" value="{{career.education}}" bindinput="onInput" data-path="career.education" />
+    <input class="ipt" placeholder="当前职业与工作强度，如：前端工程师，加班多" value="{{career.occupation}}" bindinput="onInput" data-path="career.occupation" />
+    <textarea class="ipt ta" placeholder="备注（选填）：技能、经历、限制等" value="{{career.note}}" bindinput="onInput" data-path="career.note" />
+  </view>
+
+  <view class="card">
+    <view class="section-title">目标与顾虑</view>
+    <textarea class="ipt ta" placeholder="你想实现什么？（说得模糊也没关系，AI 会追问）" value="{{goals.want}}" bindinput="onInput" data-path="goals.want" />
+    <textarea class="ipt ta" placeholder="当前最大的顾虑或担心" value="{{goals.worry}}" bindinput="onInput" data-path="goals.worry" />
+    <textarea class="ipt ta" placeholder="红线：你不想做的事，如：不想考公 / 不离开杭州" value="{{goals.redlines}}" bindinput="onInput" data-path="goals.redlines" />
+    <textarea class="ipt ta" placeholder="备注（选填）" value="{{goals.note}}" bindinput="onInput" data-path="goals.note" />
+  </view>
+
+  <view class="card">
+    <button class="btn-primary" loading="{{saving}}" bindtap="save">保存画像</button>
+    <view class="hint">信息越完整，推演越准。你可以随时回来补充，也可以只填一部分。</view>
+  </view>
+</view>

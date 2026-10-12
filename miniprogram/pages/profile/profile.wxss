@@ -1,0 +1,4 @@
+.ipt { background:#f4f5f7; border-radius:12rpx; padding:20rpx; margin:12rpx 0; font-size:30rpx; }
+.ta { height:120rpx; width:auto; }
+.section-title { font-weight:600; margin-bottom:8rpx; }
+.hint { font-size:24rpx; color:#999; margin-top:12rpx; line-height:1.6; }

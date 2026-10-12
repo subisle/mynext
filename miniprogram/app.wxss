@@ -1,0 +1,33 @@
+/* MyNext 全局样式 */
+page {
+  font-size: 32rpx;
+  color: #1a1a1a;
+  background: #f7f7f8;
+}
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  margin: 24rpx;
+}
+.btn-primary {
+  background: #4f6ef7;
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 34rpx;
+  padding: 24rpx 0;
+}
+.disclaimer {
+  font-size: 24rpx;
+  color: #999;
+  line-height: 1.6;
+}
+.ai-tag {
+  display: inline-block;
+  font-size: 20rpx;
+  color: #4f6ef7;
+  border: 1rpx solid #4f6ef7;
+  border-radius: 8rpx;
+  padding: 2rpx 10rpx;
+  margin-left: 8rpx;
+}

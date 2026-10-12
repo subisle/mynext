@@ -1,0 +1,21 @@
+<view class="container">
+  <view class="card">
+    <view class="title">MyNext</view>
+    <view class="slogan">先在 AI 中推演可能的未来，再回来把今天过得更好。</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">档案完整度</view>
+    <view class="completeness">{{completenessText}}</view>
+    <button class="btn-primary" bindtap="goProfile">完善我的画像</button>
+    <view class="hint" wx:if="{{!profileReady}}">补全 基础 / 教育职业 / 目标 三组后，即可解锁推演</view>
+  </view>
+
+  <view class="card">
+    <button class="btn-primary" bindtap="goSimulate" disabled="{{!profileReady}}">开始推演一个人生主题</button>
+  </view>
+
+  <view class="card">
+    <view class="disclaimer">MyNext 提供的是情景模拟与规划辅助，不是预测，也不构成投资、医疗或法律建议。内容由 AI 生成。</view>
+  </view>
+</view>

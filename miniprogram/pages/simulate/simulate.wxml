@@ -1,0 +1,30 @@
+<view class="container">
+  <view class="card">
+    <view class="section-title">想推演什么主题？</view>
+    <input class="ipt" placeholder="如：三年内跳槽去大厂 / 转行 / 副业" value="{{topic}}" bindinput="onTopic" />
+    <button class="btn-primary" loading="{{loading}}" bindtap="run">生成情景路径</button>
+    <view class="disclaimer" style="margin-top:12rpx;">每次推演为 2-3 条可能路径：是模拟，不是预测；往哪走由你决定。</view>
+  </view>
+
+  <view class="card" wx:for="{{branches}}" wx:key="index" wx:for-item="b">
+    <view class="path-title">{{b.title}} <text class="ai-tag">AI生成</text></view>
+    <view class="blk"><text class="k">路径描述</text>{{b.narrative}}</view>
+    <view class="blk"><text class="k">成立条件</text>{{b.preconditions}}</view>
+    <view class="blk"><text class="k">机会与代价</text>{{b.tradeoffs}}</view>
+    <view class="blk"><text class="k">风险与预警</text>{{b.risks}}</view>
+    <view class="blk"><text class="k">不确定性</text>{{b.uncertainties}}</view>
+    <view class="blk"><text class="k">本周可验证行动</text>{{b.weekAction}}</view>
+    <view class="blk feedback">
+      <text class="k">7 天后回顾：这条行动做了吗？</text>
+      <view class="fb-row">
+        <button size="mini" data-branch="{{index}}" data-status="done" bindtap="feedback">做完了</button>
+        <button size="mini" data-branch="{{index}}" data-status="partial" bindtap="feedback">做了一部分</button>
+        <button size="mini" data-branch="{{index}}" data-status="missed" bindtap="feedback">没顾上</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{branches.length}}">
+    <view class="disclaimer">以上为 AI 生成的情景模拟，基于你当前提供的信息与假设，存在不确定性。它不能预测你的未来，也不构成任何专业建议。</view>
+  </view>
+</view>
