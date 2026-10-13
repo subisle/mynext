@@ -1,15 +1,18 @@
 // MyNext - app entry
+const config = require("./config.js");
+
 App({
-  globalData: { openid: "" },
+  globalData: { openid: "", cloudReady: false },
   onLaunch() {
     if (!wx.cloud) {
       console.error("wx.cloud 不可用，请升级基础库 >= 2.2.3");
       return;
     }
-    wx.cloud.init({
-      env: "mynext-prod", // TODO: 替换为实际云环境 ID
-      traceUser: true
-    });
+    // 未配置 cloudEnv 时使用默认环境；配置了则用指定环境
+    const initOptions = { traceUser: true };
+    if (config.cloudEnv) initOptions.env = config.cloudEnv;
+    wx.cloud.init(initOptions);
+    this.globalData.cloudReady = true;
     this.login();
   },
   login() {
@@ -22,8 +25,8 @@ App({
   },
   // 订阅消息：在用户完成一次推演后引导，避免首次进入即弹窗
   requestSubscribe() {
-    const TEMPLATE_ID = "TODO_TEMPLATE_ID"; // TODO: 替换为已申请的订阅消息模板 ID
-    if (TEMPLATE_ID.indexOf("TODO") === 0) return Promise.resolve({ accepted: false, skipped: true });
+    const TEMPLATE_ID = config.subscribeTemplateId;
+    if (!TEMPLATE_ID) return Promise.resolve({ accepted: false, skipped: true });
     return new Promise(resolve => {
       wx.requestSubscribeMessage({
         tmplIds: [TEMPLATE_ID],
