@@ -17,6 +17,13 @@ Page({
       }
       this.setData({ branches: r.data.branches, loading: false });
       wx.cloud.callFunction({ name: "metrics", data: { action: "track", name: "simulation_completed", payload: { topic } } }).catch(() => {});
+      // 完成推演后引导订阅每日回访（失败不打扰）
+      const app = getApp();
+      if (app && app.requestSubscribe) {
+        app.requestSubscribe().then(r => {
+          if (r && r.accepted) wx.showToast({ title: "已开启每日回顾", icon: "none" });
+        }).catch(() => {});
+      }
     }).catch(() => {
       this.setData({ loading: false });
       wx.showToast({ title: "网络异常，请重试", icon: "none" });
@@ -30,6 +37,7 @@ Page({
       data: { action: "submit", topic: this.data.topic, branchTitle: b.title, weekAction: b.weekAction, status }
     }).then(() => {
       wx.showToast({ title: "已记录", icon: "success" });
+      wx.cloud.callFunction({ name: "metrics", data: { action: "track", name: "feedback_submitted", payload: { status } } }).catch(() => {});
       wx.cloud.callFunction({ name: "plan", data: { action: "adjust", status, weekAction: b.weekAction } })
         .then(res => {
           const r = res.result || {};

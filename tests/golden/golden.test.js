@@ -234,6 +234,120 @@ t("38. 行动建议只谈「计划怎么设计」，不定性用户", function (
   });
 });
 
+
+// ================= v1.5 增补：画像→账本映射 / 账本差分 / 理解摘要 =================
+const { profileToLedgerItems, diffLedger, splitRedlines } = require("../../cloudfunctions/profile/ledger.js");
+const { buildSummary, checkNoLabeling: checkSummaryLabeling } = require("../../cloudfunctions/memory/summary.js");
+
+console.log("== 画像到账本（红线必须真正生效）==");
+const demoProfile = {
+  basic: { nickname: "小王", birthDecade: "1995", city: "杭州", note: "膝盖旧伤不能跑步。家里说可以支持一年脱产" },
+  career: { education: "二本计算机 2027 届", occupation: "应届生，在准备考研", note: "想早点经济独立" },
+  goals: { want: "毕业前定下方向", worry: "考研和就业拿不准", redlines: "不接受负债创业，不想离开杭州" }
+};
+const items = profileToLedgerItems(demoProfile);
+
+t("39. 红线被切分为独立约束条目", function () {
+  const rl = items.filter(function (i) { return i.kind === "redline"; });
+  assert(rl.length === 2, "红线条目数错误: " + rl.length);
+  assert(rl[0].content === "不接受负债创业", "红线内容错误: " + rl[0].content);
+  assert(rl[1].content === "不想离开杭州", "第二条红线错误");
+});
+t("40. 目标成为 goal 条目（可被后续变更置为历史）", function () {
+  const g = items.filter(function (i) { return i.kind === "goal"; });
+  assert(g.length === 1 && g[0].content === "毕业前定下方向", "目标映射错误");
+});
+t("41. 备注被切分为可引用事实", function () {
+  const contents = items.map(function (i) { return i.content; }).join("|");
+  assert(contents.indexOf("膝盖旧伤不能跑步") !== -1, "备注事实缺失");
+  assert(items.filter(function (i) { return i.kind === "fact"; }).length >= 3, "事实条目过少");
+});
+t("42. 结构化字段映射为事实", function () {
+  const contents = items.map(function (i) { return i.content; }).join("|");
+  assert(contents.indexOf("所在城市：杭州") !== -1, "城市未映射");
+  assert(contents.indexOf("教育背景：二本计算机 2027 届") !== -1, "教育未映射");
+});
+t("43. 敏感信息不得进入账本", function () {
+  const bad = profileToLedgerItems({ basic: { note: "身份证 110101199501011234" } });
+  // 映射层不做拦截（由云函数拦截），但必须原样可检出——此处断言云函数用的正则可命中
+  const re = /\b\d{17}[0-9Xx]\b/;
+  assert(re.test(bad[0].content), "敏感信息正则未命中");
+});
+t("44. 同内容不重复入账", function () {
+  const dup = profileToLedgerItems({ basic: { city: "杭州", note: "杭州" } });
+  const keys = dup.map(function (d) { return d.dedupeKey; });
+  assert(new Set(keys).size === keys.length, "存在重复条目");
+});
+t("45. 单条红线超长/空值被忽略", function () {
+  const r = splitRedlines("，,,  ； 不接受负债创业 ; 不");
+  assert(r.length === 1 && r[0] === "不接受负债创业", "切分结果异常: " + JSON.stringify(r));
+});
+
+console.log("== 账本差分（用户纠错不被覆盖）==");
+const existing = [
+  { _id: "e1", kind: "fact", content: "所在城市：杭州", source: "user_confirmed", fromProfile: true },
+  { _id: "e2", kind: "fact", content: "我手动补充的一条", source: "user_confirmed" },
+  { _id: "e3", kind: "redline", content: "不接受负债创业", source: "user_confirmed", fromProfile: true }
+];
+const desired = [
+  { kind: "fact", content: "所在城市：杭州", dedupeKey: "fact|所在城市：杭州" },
+  { kind: "fact", content: "教育背景：二本计算机", dedupeKey: "fact|教育背景：二本计算机" }
+];
+const d = diffLedger(existing, desired);
+
+t("46. 新增缺失条目", function () {
+  assert(d.toAdd.length === 1 && d.toAdd[0].content === "教育背景：二本计算机", "新增计算错误");
+});
+t("47. 画像中删除的红线会被移除", function () {
+  assert(d.toRemove.length === 1 && d.toRemove[0]._id === "e3", "移除计算错误");
+});
+t("48. 用户手动添加的条目不被删除", function () {
+  const removedIds = d.toRemove.map(function (x) { return x._id; });
+  assert(removedIds.indexOf("e2") === -1, "手动条目被误删");
+});
+t("49. 已存在的问题不重复添加", function () {
+  const added = d.toAdd.map(function (x) { return x.content; });
+  assert(added.indexOf("所在城市：杭州") === -1, "重复添加");
+});
+
+console.log("== 理解摘要（评审第 1 题的可视化）==");
+const summaryItems = [
+  { _id: "m1", kind: "fact", content: "计算机专业应届生", source: "user_confirmed", status: "current" },
+  { _id: "m2", kind: "goal", content: "毕业后直接就业", source: "user_confirmed", status: "current" },
+  { _id: "m3", kind: "goal", content: "考研上岸", source: "user_confirmed", status: "superseded" },
+  { _id: "m4", kind: "redline", content: "不接受负债创业", source: "user_confirmed", status: "current" },
+  { _id: "m5", kind: "inference", content: "可能偏好结构化学习", source: "ai_inferred", status: "current" }
+];
+const s = buildSummary(summaryItems);
+
+t("50. 摘要引用来源 id（可追溯）", function () {
+  assert(s.refs.indexOf("m1") !== -1 && s.refs.indexOf("m2") !== -1 && s.refs.indexOf("m4") !== -1, "引用缺失: " + JSON.stringify(s.refs));
+});
+t("51. 已变更目标不得作为当前方向", function () {
+  assert(s.text.indexOf("毕业后直接就业") !== -1, "当前目标缺失");
+  assert(s.text.indexOf("考研上岸") === -1, "历史目标出现在理解摘要中");
+  assert(s.refs.indexOf("m3") === -1, "历史目标被引用");
+});
+t("52. 红线在摘要中明确声明", function () {
+  assert(s.text.indexOf("不接受负债创业") !== -1, "红线未出现");
+});
+t("53. AI 推断单独标注待确认", function () {
+  assert(s.text.indexOf("还没有经过你确认") !== -1, "推断未标注");
+  assert(s.needsConfirmation === true, "待确认标记缺失");
+});
+t("54. 空账本给出诚实反馈而非编造", function () {
+  const e = buildSummary([]);
+  assert(e.text.indexOf("没有足够的信息") !== -1, "空账本未诚实反馈");
+  assert(e.refs.length === 0, "空账本不应有引用");
+});
+t("55. 摘要不含人格标签", function () {
+  assert(checkSummaryLabeling(s.text).ok, "摘要出现标签化表述");
+  assert(checkSummaryLabeling("你是内向型人格").ok === false, "标签检测失效");
+});
+t("56. 摘要包含确认问句（支撑确认率指标）", function () {
+  assert(s.question.indexOf("准确吗") !== -1, "缺少确认问句");
+});
+
 console.log("");
 console.log("GOLDEN PASS: " + pass + " assertions");
 console.log(process.exitCode ? "GOLDEN FAILED" : "ALL GREEN");

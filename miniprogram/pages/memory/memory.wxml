@@ -4,6 +4,16 @@
     <view class="hint">这里是 MyNext 用于推演的全部记忆条目。你可以查看来源、纠正、删除任意一条。</view>
   </view>
 
+  <view class="card" wx:if="{{summary}}">
+    <view class="section-title">AI 对你的理解 <text class="ai-tag">AI生成</text></view>
+    <view class="summary">{{summary.text}}</view>
+    <view class="hint">{{summary.question}}</view>
+    <view class="ops">
+      <text class="op" bindtap="summaryConfirm">基本准确</text>
+      <text class="op danger" bindtap="summaryCorrect">不准确，我来纠正</text>
+    </view>
+  </view>
+
   <view class="card">
     <view class="section-title">添加</view>
     <view class="tabs">

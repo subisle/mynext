@@ -1,6 +1,6 @@
 # MyNext 当前项目设计文档（v1.3 · 实施版）
 
-> 版本：v1.4 ｜ 日期：2026-10-13 ｜ 状态：**功能齐备待联调（金样例 38/38 PASS；等待 AppID 与云环境）**
+> 版本：v1.5 ｜ 日期：2026-10-13 ｜ 状态：**代码就绪待联调（金样例 56/56 PASS；仅缺 AppID / 云环境 / 密钥 / 主体资质）**
 > v1.3 增量：回应严格评审——上线资格 P0 处置（ADR-0003）、事实账本、红线硬校验、提示词注入防护、反馈驱动计划调整、测试扩到 22 断言
 > 本文 = 当前唯一有效设计快照。文档优先级见第 2 节；与旧文档冲突时以本文为准。
 
@@ -213,3 +213,15 @@ L3 金样例回归 7 断言：合法放行 + 伪概率/股票/违法/路径数�
 | 测试 | 38 断言全绿（推演结构/红线/注入/引用/调整/触达纪律/问卷边界） |
 
 **待用户侧就绪**：AppID（替换 touristappid）、云环境 ID（替换 mynext-prod）、LLM_API_KEY、SUBSCRIBE_TEMPLATE_ID、订阅消息模板申请、主体与类目资格。
+### 9.7 v1.5 增量（打通闭环）
+
+| 缺口 | 修复 |
+|---|---|
+| 画像里的红线从未进入推演 | profile 保存后自动同步账本（`ledger.js` 纯函数映射 + 差分），红线/目标/备注成为可追溯条目 |
+| 用户纠错会被下次画像同步覆盖 | 差分只移除 `fromProfile` 且在画像中确已删除的条目，用户手动添加与纠正过的保留 |
+| 订阅授权无处落库，visitJob 永远没有收件人 | 新增 `notify` 云函数（save/status/disable）；推演完成后引导订阅 |
+| 启动未登录 | `app.js` onLaunch 调用 user 登录并缓存 openid |
+| 理解摘要缺失（评审第 1 题） | `memory.summary` 确定性生成 + 记忆本卡片；确认/纠正分别埋点，支撑"理解摘要确认率" |
+| 埋点未接线 | profile_saved / simulation_completed / feedback_submitted / adjustment_generated / memory_corrected / memory_deleted / memory_summary_confirmed / survey_completed 全部接上 |
+
+**云函数清单（9 个）**：user、profile、memory、simulate、feedback、plan、survey、metrics、notify、visitJob（含定时触发器）。

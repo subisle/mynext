@@ -1,8 +1,32 @@
 const KIND_LABEL = { fact: "事实", goal: "目标", redline: "红线", inference: "推断" };
 
 Page({
-  data: { items: [], kind: "fact", draft: "", placeholder: "如：明年 6 月毕业" },
-  onShow() { this.load(); },
+  data: { items: [], summary: null, kind: "fact", draft: "", placeholder: "如：明年 6 月毕业" },
+  onShow() { this.load(); this.loadSummary(); },
+  loadSummary() {
+    wx.cloud.callFunction({ name: "memory", data: { action: "summary" } }).then(res => {
+      const r = res.result || {};
+      if (r.code === 0) this.setData({ summary: r.data });
+    }).catch(() => {});
+  },
+  summaryConfirm() {
+    const s = this.data.summary || {};
+    wx.cloud.callFunction({ name: "memory", data: { action: "summaryFeedback", verdict: "confirm", refs: s.refs || [] } })
+      .then(() => wx.showToast({ title: "已确认", icon: "success" }));
+  },
+  summaryCorrect() {
+    const s = this.data.summary || {};
+    wx.showModal({
+      title: "哪一条不准确？", editable: true, placeholderText: "写下正确的内容",
+      success: (r) => {
+        if (!r.confirm || !r.content) return;
+        wx.cloud.callFunction({ name: "memory", data: { action: "add", kind: "fact", content: r.content } })
+          .then(() => wx.cloud.callFunction({ name: "memory", data: { action: "summaryFeedback", verdict: "correct", refs: s.refs || [] } }))
+          .then(() => { this.load(); this.loadSummary(); wx.showToast({ title: "已记住修正", icon: "success" }); })
+          .catch(() => wx.showToast({ title: "操作失败", icon: "none" }));
+      }
+    });
+  },
   load() {
     wx.cloud.callFunction({ name: "memory", data: { action: "list" } }).then(res => {
       const raw = (res.result && res.result.data && res.result.data.items) || [];

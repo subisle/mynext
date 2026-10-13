@@ -32,6 +32,7 @@ Page({
       this.setData({ saving: false });
       const c = Math.round(((res.result && res.result.data && res.result.data.completeness) || 0) * 100);
       wx.showToast({ title: "已保存，完整度 " + c + "%", icon: "success" });
+      wx.cloud.callFunction({ name: "metrics", data: { action: "track", name: "profile_saved", payload: { completeness: c } } }).catch(() => {});
       setTimeout(() => wx.navigateBack(), 800);
     }).catch(() => {
       this.setData({ saving: false });
