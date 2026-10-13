@@ -17,5 +17,6 @@ Page({
     }).catch(() => {});
   },
   goProfile() { wx.navigateTo({ url: "/pages/profile/profile" }); },
-  goSimulate() { wx.navigateTo({ url: "/pages/simulate/simulate" }); }
+  goSimulate() { wx.navigateTo({ url: "/pages/simulate/simulate" }); },
+  goMemory() { wx.navigateTo({ url: "/pages/memory/memory" }); }
 });

@@ -30,4 +30,11 @@ page {
   border-radius: 8rpx;
   padding: 2rpx 10rpx;
   margin-left: 8rpx;
+}.btn-plain {
+  margin-top: 20rpx;
+  background: #f0f1f5;
+  color: #4f6ef7;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  padding: 22rpx 0;
 }

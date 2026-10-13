@@ -13,6 +13,7 @@
 
   <view class="card">
     <button class="btn-primary" bindtap="goSimulate" disabled="{{!profileReady}}">开始推演一个人生主题</button>
+    <button class="btn-plain" bindtap="goMemory">AI 记住了我什么</button>
   </view>
 
   <view class="card">

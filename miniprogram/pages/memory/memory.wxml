@@ -1,0 +1,38 @@
+<view class="container">
+  <view class="card">
+    <view class="section-title">AI 记住了我什么</view>
+    <view class="hint">这里是 MyNext 用于推演的全部记忆条目。你可以查看来源、纠正、删除任意一条。</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">添加</view>
+    <view class="tabs">
+      <view class="tab {{kind==='fact'?'on':''}}" data-kind="fact" bindtap="setKind">事实</view>
+      <view class="tab {{kind==='goal'?'on':''}}" data-kind="goal" bindtap="setKind">目标</view>
+      <view class="tab {{kind==='redline'?'on':''}}" data-kind="redline" bindtap="setKind">红线</view>
+    </view>
+    <textarea class="ipt ta" placeholder="{{placeholder}}" value="{{draft}}" bindinput="onDraft" />
+    <button class="btn-primary" bindtap="add">保存</button>
+    <view class="hint" wx:if="{{kind==='goal'}}">保存新目标后，旧目标会标记为「历史，已变更」，不再作为当前事实。</view>
+    <view class="hint" wx:if="{{kind==='redline'}}">红线是硬约束：推演中任何路径都不得包含它。</view>
+  </view>
+
+  <view class="card" wx:for="{{items}}" wx:key="_id" wx:for-item="it">
+    <view class="row">
+      <text class="badge badge-{{it.kind}}">{{it.kindLabel}}</text>
+      <text class="status" wx:if="{{it.status==='superseded'}}">历史，已变更</text>
+      <text class="status warn" wx:if="{{it.source==='ai_inferred'}}">AI 推断 · 待确认</text>
+    </view>
+    <view class="content">{{it.content}}</view>
+    <view class="evidence" wx:if="{{it.evidence && it.evidence!==it.content}}">原话：{{it.evidence}}</view>
+    <view class="ops">
+      <text class="op" data-id="{{it._id}}" bindtap="edit">纠正</text>
+      <text class="op" wx:if="{{it.source==='ai_inferred'}}" data-id="{{it._id}}" bindtap="confirm">确认无误</text>
+      <text class="op danger" data-id="{{it._id}}" bindtap="remove">删除</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{!items.length}}">
+    <view class="hint">还没有记忆条目。你在画像和目标里填写的内容会作为事实存入这里。</view>
+  </view>
+</view>

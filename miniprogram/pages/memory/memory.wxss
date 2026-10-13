@@ -1,0 +1,18 @@
+.section-title { font-weight:600; margin-bottom:8rpx; }
+.hint { font-size:24rpx; color:#999; line-height:1.6; }
+.ipt { background:#f4f5f7; border-radius:12rpx; padding:20rpx; margin:12rpx 0; font-size:30rpx; }
+.ta { height:120rpx; width:auto; }
+.tabs { display:flex; gap:16rpx; margin:8rpx 0 4rpx; }
+.tab { padding:10rpx 28rpx; border-radius:999rpx; background:#f0f1f5; font-size:26rpx; color:#555; }
+.tab.on { background:#4f6ef7; color:#fff; }
+.row { display:flex; align-items:center; gap:12rpx; }
+.badge { font-size:22rpx; padding:4rpx 14rpx; border-radius:8rpx; background:#eef1ff; color:#4f6ef7; }
+.badge-redline { background:#ffeceb; color:#e5484d; }
+.badge-goal { background:#eafaf1; color:#12a150; }
+.status { font-size:22rpx; color:#999; }
+.status.warn { color:#e8a33d; }
+.content { font-size:30rpx; margin:14rpx 0 6rpx; line-height:1.6; }
+.evidence { font-size:24rpx; color:#999; }
+.ops { display:flex; gap:28rpx; margin-top:16rpx; }
+.op { font-size:26rpx; color:#4f6ef7; }
+.op.danger { color:#e5484d; }
