@@ -143,6 +143,97 @@ t("22. 提示词含关键约束", function () {
   assert(SYSTEM_PROMPT.includes("factsUsed"));
 });
 
+
+// ================= v1.4 增补：计划调整 / 触达纪律 / 问卷评分 =================
+const { adjust, checkTone } = require("../../cloudfunctions/plan/adjust.js");
+const { isQuietHour, dateKey, checkMessageTone } = require("../../cloudfunctions/visitJob/schedule.js");
+const { score, checkNoLabeling } = require("../../cloudfunctions/survey/score.js");
+
+console.log("== 反馈驱动计划调整（评审第 5 题）==");
+const ACTION = "整理一份方向对比清单";
+
+t("23. 完成 → 升档", function () {
+  const a = adjust("done", ACTION, 0);
+  assert(a.level === "up" && a.actions.length === 1 && a.detail.factor === 1.5, "升档逻辑错误: " + JSON.stringify(a));
+});
+t("24. 部分完成 → 维持并拆分", function () {
+  const a = adjust("partial", ACTION, 0);
+  assert(a.level === "keep" && a.detail.split === true, "部分完成逻辑错误");
+});
+t("25. 未完成 → 降载且给出更小动作", function () {
+  const a = adjust("missed", ACTION, 0);
+  assert(a.level === "down" && a.detail.factor === 0.5, "降载逻辑错误");
+  assert(a.actions.join(" ").indexOf("15 分钟") !== -1, "未给出更小粒度动作");
+});
+t("26. 连续未完成 → 建议冻结目标周期", function () {
+  const a = adjust("missed", ACTION, 1);
+  assert(a.level === "freeze-suggest" && a.detail.freezeSuggested === true, "冻结建议缺失");
+});
+t("27. 调整前后可对照（回答「你改了什么」）", function () {
+  const a = adjust("missed", ACTION, 0);
+  assert(a.actions[0].indexOf(ACTION) === 0, "未保留原行动以便对照");
+});
+t("28. 文案不含说教措辞", function () {
+  ["done", "partial", "missed"].forEach(function (s) {
+    const a = adjust(s, ACTION, 0);
+    const r = checkTone(a.reason + " " + a.actions.join(" "));
+    assert(r.ok, s + " 文案含说教措辞: " + r.hits.join(","));
+  });
+});
+t("29. 说教文案会被门禁拦下", function () {
+  assert(checkTone("你本应该坚持下来").ok === false, "说教措辞未被拦截");
+});
+
+console.log("== 触达纪律（静默期与话术）==");
+t("30. 22:00-07:00 为静默期", function () {
+  assert(isQuietHour(23) && isQuietHour(3) && isQuietHour(22) && isQuietHour(6), "静默期判定错误");
+  assert(!isQuietHour(9) && !isQuietHour(21) && !isQuietHour(7), "非静默期被误判");
+});
+t("31. 异常时间按静默处理（宁可不发）", function () {
+  assert(isQuietHour("abc") === true && isQuietHour(undefined) === true, "异常值未按静默处理");
+});
+t("32. 幂等键按天生成", function () {
+  assert(dateKey(new Date(2026, 9, 13, 21, 0, 0)) === "2026-10-13", "dateKey 错误: " + dateKey(new Date(2026, 9, 13)));
+});
+t("33. 提醒话术符合纪律", function () {
+  const okMsg = "你给自己定的行动，今天做了吗？没做我们就调小一点。";
+  assert(checkMessageTone(okMsg).ok, "合规话术被误判");
+  assert(!checkMessageTone("你为什么又没做").ok, "指责型话术未拦截");
+});
+
+console.log("== 探索性问卷（评审第 3 题）==");
+t("34. 五题完整作答 → 五维结果", function () {
+  const r = score({ q1: "a", q2: "b", q3: "a", q4: "a", q5: "b" });
+  assert(r.answered === 5, "维度数量错误: " + r.answered);
+  assert(r.dimensions.riskStyle === "small-step", "风险偏好映射错误");
+  assert(r.dimensions.valuePriority === "growth", "价值排序映射错误");
+  assert(r.hints.length === 5, "行动建议数量错误");
+});
+t("35. 部分作答不阻断，缺失项单独记录", function () {
+  const r = score({ q1: "c" });
+  assert(r.answered === 1 && r.missing.length === 4, "缺失处理错误");
+  assert(r.hints.length === 1, "部分结果的建议数量错误");
+});
+t("36. 结果明确标注为探索性、非标准化测评", function () {
+  const r = score({ q1: "a" });
+  assert(r.label === "探索性问卷结果", "缺少探索性标注");
+  assert(r.disclaimer.indexOf("不是") !== -1 && r.disclaimer.indexOf("标准化人格测评") !== -1, "免责声明不完整");
+});
+t("37. 输出不含人格标签与贬损表述", function () {
+  const r = score({ q1: "a", q2: "a", q3: "a", q4: "b", q5: "d" });
+  const g = checkNoLabeling(r.hints.join(" ") + r.disclaimer);
+  assert(g.ok, "出现标签化表述: " + g.hits.join(","));
+  assert(checkNoLabeling("你是内向型人格").ok === false, "标签化检测失效");
+});
+t("38. 行动建议只谈「计划怎么设计」，不定性用户", function () {
+  const r = score({ q1: "b", q2: "a", q3: "b", q4: "a", q5: "a" });
+  const joined = r.hints.join(" ");
+  assert(joined.indexOf("建议") !== -1, "建议句式缺失");
+  ["你是", "你不适合", "注定"].forEach(function (w) {
+    assert(joined.indexOf(w) === -1, "出现定性表述: " + w);
+  });
+});
+
 console.log("");
 console.log("GOLDEN PASS: " + pass + " assertions");
-if (process.exitCode) { console.log("GOLDEN FAILED"); } else { console.log("ALL GREEN"); }
+console.log(process.exitCode ? "GOLDEN FAILED" : "ALL GREEN");

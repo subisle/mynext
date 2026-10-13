@@ -3,7 +3,8 @@
     "pages/index/index",
     "pages/profile/profile",
     "pages/simulate/simulate",
-    "pages/memory/memory"
+    "pages/memory/memory",
+    "pages/survey/survey"
   ],
   "window": {
     "backgroundTextStyle": "light",

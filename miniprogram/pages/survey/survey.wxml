@@ -1,0 +1,25 @@
+<view class="container">
+  <view class="card">
+    <view class="section-title">关于生活的几个问题</view>
+    <view class="hint">这是 MyNext 的探索性问卷（5 题），只用来调整给你的行动建议的表达方式。<text class="strong">它不是性格测评</text>，也不会用来评价你或限制你的选择。</view>
+  </view>
+
+  <view class="card" wx:for="{{questions}}" wx:key="id" wx:for-item="q">
+    <view class="q-title">{{q.index}}. {{q.title}}</view>
+    <view class="opts">
+      <view class="opt {{answers[q.id]===o.value?'on':''}}" wx:for="{{q.options}}" wx:key="value" wx:for-item="o"
+            data-q="{{q.id}}" data-v="{{o.value}}" bindtap="pick">{{o.label}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <button class="btn-primary" loading="{{saving}}" bindtap="submit">提交</button>
+    <view class="hint">可以只答一部分，未答的题目不会影响其他结果。</view>
+  </view>
+
+  <view class="card" wx:if="{{result}}">
+    <view class="section-title">你的探索性结果</view>
+    <view class="hint">{{result.disclaimer}}</view>
+    <view class="hint-list" wx:for="{{result.hints}}" wx:key="index" wx:for-item="h">· {{h}}</view>
+  </view>
+</view>

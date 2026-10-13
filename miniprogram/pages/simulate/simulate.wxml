@@ -24,6 +24,14 @@
     </view>
   </view>
 
+  <view class="card" wx:if="{{adjustment}}">
+    <view class="path-title">计划已调整 <text class="ai-tag">AI生成</text></view>
+    <view class="blk"><text class="k">为什么改</text>{{adjustment.reason}}</view>
+    <view class="blk"><text class="k">接下来怎么做</text>
+      <view wx:for="{{adjustment.actions}}" wx:key="index" wx:for-item="a">· {{a}}</view>
+    </view>
+  </view>
+
   <view class="card" wx:if="{{branches.length}}">
     <view class="disclaimer">以上为 AI 生成的情景模拟，基于你当前提供的信息与假设，存在不确定性。它不能预测你的未来，也不构成任何专业建议。</view>
   </view>

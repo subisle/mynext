@@ -18,5 +18,6 @@ Page({
   },
   goProfile() { wx.navigateTo({ url: "/pages/profile/profile" }); },
   goSimulate() { wx.navigateTo({ url: "/pages/simulate/simulate" }); },
-  goMemory() { wx.navigateTo({ url: "/pages/memory/memory" }); }
+  goMemory() { wx.navigateTo({ url: "/pages/memory/memory" }); },
+  goSurvey() { wx.navigateTo({ url: "/pages/survey/survey" }); }
 });

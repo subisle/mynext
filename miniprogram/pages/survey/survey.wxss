@@ -1,0 +1,8 @@
+.section-title { font-weight:600; margin-bottom:8rpx; }
+.hint { font-size:24rpx; color:#999; line-height:1.7; }
+.strong { color:#e5484d; }
+.q-title { font-size:30rpx; margin-bottom:14rpx; }
+.opts { display:flex; flex-wrap:wrap; gap:14rpx; }
+.opt { padding:14rpx 26rpx; background:#f0f1f5; border-radius:999rpx; font-size:28rpx; color:#444; }
+.opt.on { background:#4f6ef7; color:#fff; }
+.hint-list { font-size:28rpx; line-height:1.8; color:#333; margin-top:12rpx; }
