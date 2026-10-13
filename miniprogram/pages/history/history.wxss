@@ -1,0 +1,9 @@
+.section-title { font-weight:600; margin-bottom:8rpx; }
+.hint { font-size:24rpx; color:#999; line-height:1.7; }
+.path-title { font-weight:600; font-size:32rpx; }
+.meta { font-size:24rpx; color:#999; margin-top:6rpx; display:flex; align-items:center; gap:8rpx; flex-wrap:wrap; }
+.dot { color:#ddd; }
+.status { color:#e8a33d; }
+.titles { font-size:28rpx; color:#333; margin-top:12rpx; line-height:1.7; }
+.fb { font-size:26rpx; color:#12a150; margin-top:12rpx; }
+.fb.warn { color:#e8a33d; }

@@ -1,0 +1,25 @@
+<view class="container">
+  <view class="card">
+    <view class="section-title">我的推演记录</view>
+    <view class="hint">同一用户的连续推演记录。每一次都保存了当时依据的画像快照、注入的记忆条目和提示词版本，所以结论变化可以追溯。</view>
+  </view>
+
+  <view class="card" wx:for="{{list}}" wx:key="id" wx:for-item="it">
+    <view class="path-title">{{it.topic}}</view>
+    <view class="meta">
+      <text>{{it.timeText}}</text>
+      <text class="dot">·</text>
+      <text>{{it.branchCount}} 条路径</text>
+      <text class="dot">·</text>
+      <text>引用 {{it.injected}} 条记忆</text>
+      <text class="status" wx:if="{{it.retried}}">重新生成过</text>
+    </view>
+    <view class="titles" wx:for="{{it.branchTitles}}" wx:key="index" wx:for-item="t">· {{t}}</view>
+    <view class="fb" wx:if="{{it.feedback}}">上次反馈：{{it.feedbackText}}</view>
+    <view class="fb warn" wx:else>还没有反馈</view>
+  </view>
+
+  <view class="card" wx:if="{{!list.length}}">
+    <view class="hint">还没有推演记录。去首页填好画像，开始第一次推演。</view>
+  </view>
+</view>

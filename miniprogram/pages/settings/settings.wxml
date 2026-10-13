@@ -1,0 +1,26 @@
+<view class="container">
+  <view class="card">
+    <view class="section-title">目标周期</view>
+    <view wx:if="{{frozen}}" class="hint">
+      当前处于暂停状态：暂停期间不会收到任何行动提醒。
+      <view class="reason">{{state.reason}}</view>
+    </view>
+    <view wx:else class="hint">当前没有暂停中的目标周期。</view>
+    <button class="btn-plain" wx:if="{{frozen}}" bindtap="resume">恢复提醒</button>
+  </view>
+
+  <view class="card">
+    <view class="section-title">我的数据</view>
+    <view class="hint">你在 MyNext 里的画像、记忆、推演与反馈记录。你可以导出，也可以全部删除。</view>
+    <button class="btn-plain" loading="{{exporting}}" bindtap="doExport">导出我的数据</button>
+    <view class="hint" wx:if="{{exportCounts}}">
+      <view wx:for="{{exportLines}}" wx:key="index" wx:for-item="l">· {{l}}</view>
+    </view>
+    <button class="btn-danger" bindtap="doDelete">删除我的全部数据</button>
+  </view>
+
+  <view class="card">
+    <view class="section-title">关于</view>
+    <view class="hint">MyNext 提供情景模拟与规划辅助，不构成投资、医疗或法律建议。AI 生成内容仅供参考，人生无法被预测。</view>
+  </view>
+</view>

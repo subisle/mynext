@@ -348,6 +348,105 @@ t("56. 摘要包含确认问句（支撑确认率指标）", function () {
   assert(s.question.indexOf("准确吗") !== -1, "缺少确认问句");
 });
 
+
+// ================= v1.6 增补：重试指令 / 冻结规则 / 数据导出删除范围 =================
+const { retryHint, isRetryable } = require("../../cloudfunctions/simulate/retry.js");
+const { shouldSuggestFreeze, buildFreezeState, isFrozen, reminderPolicy, MISSED_THRESHOLD } = require("../../cloudfunctions/plan/state.js");
+const { USER_COLLECTIONS, buildExportPackage, sanitizeForExport, deletionNotice } = require("../../cloudfunctions/account/scope.js");
+
+console.log("== 推演失败重试（提升一次通过率）==");
+t("57. 结构类错误可重试且给出具体修正要求", function () {
+  assert(isRetryable("missing:weekAction") === true, "结构错误应可重试");
+  const h = retryHint("missing:weekAction");
+  assert(h.indexOf("weekAction") !== -1, "未指出缺失字段");
+});
+t("58. 红线违反的重试指令强调硬排除", function () {
+  const h = retryHint("redline-violation");
+  assert(h.indexOf("红线") !== -1 && h.indexOf("不得包含") !== -1, "红线指令不明确");
+});
+t("59. 伪概率的重试指令指向替代表达", function () {
+  const h = retryHint("pseudo-probability");
+  assert(h.indexOf("禁止") !== -1 && h.indexOf("风险等级") !== -1, "未给出替代表达方式");
+});
+t("60. 未知错误不得盲目重试", function () {
+  assert(isRetryable("模型超时") === false, "未知原因不应判为可重试");
+});
+
+console.log("== 目标冻结（不让暂停变成压力）==");
+t("61. 连续未完成达阈值才建议冻结", function () {
+  assert(shouldSuggestFreeze(0) === false, "0 次不应冻结");
+  assert(shouldSuggestFreeze(MISSED_THRESHOLD) === true, "达阈值应建议冻结");
+});
+t("62. 冻结期内不发送任何行动提醒", function () {
+  const st = buildFreezeState("u1", "连续未完成");
+  const p = reminderPolicy(st, new Date());
+  assert(p.send === false && p.kind === "frozen", "冻结期仍在发送提醒");
+});
+t("63. 冻结到期自动解冻，不产生催促", function () {
+  const st = buildFreezeState("u1", "连续未完成", 14);
+  const future = new Date(Date.now() + 20 * 24 * 3600 * 1000);
+  assert(isFrozen(st, future) === false, "到期后仍判定为冻结");
+  assert(reminderPolicy(st, future).send === true, "到期后未恢复提醒");
+});
+t("64. 未冻结用户提醒策略不受影响", function () {
+  assert(reminderPolicy(null, new Date()).send === true, "未冻结用户被误判");
+  assert(isFrozen({ frozen: false }, new Date()) === false, "frozen=false 误判");
+});
+
+console.log("== 数据导出与删除（合规）==");
+t("65. 导出会剔除用户标识", function () {
+  const rows = sanitizeForExport([{ _id: "a", openid: "oABC", content: "示例" }]);
+  assert(rows[0].openid === undefined, "openid 未被剔除");
+  assert(rows[0].content === "示例", "有效内容被误删");
+});
+t("66. 导出包带格式版本与说明", function () {
+  const pkg = buildExportPackage("u1", { profiles: [{ _id: "p", openid: "u1", basic: {} }] });
+  assert(pkg.format === "mynext-export-v1", "缺少格式版本");
+  assert(pkg.note.indexOf("不包含任何身份标识") !== -1, "缺少隐私说明");
+  assert(pkg.collections.profiles.length === 1, "导出内容缺失");
+});
+t("67. 删除覆盖全部用户集合（含派生的记忆与埋点）", function () {
+  ["profiles", "memoryItems", "simulations", "actionFeedbacks", "surveyAnswers", "metricsEvents", "goalStates"].forEach(function (c) {
+    assert(USER_COLLECTIONS.indexOf(c) !== -1, "删除范围遗漏: " + c);
+  });
+});
+t("68. 审计日志不在删除清单内（需保留但匿名化）", function () {
+  assert(USER_COLLECTIONS.indexOf("auditLog") === -1, "审计日志不应被直接删除");
+});
+t("69. 删除前明确告知影响与不可恢复", function () {
+  const n = deletionNotice();
+  const text = n.detail.join(" ");
+  assert(text.indexOf("无法恢复") !== -1, "缺少不可恢复提示");
+  assert(text.indexOf("审计日志") !== -1, "未说明审计日志处理方式");
+  assert(text.indexOf("匿名化") !== -1, "未说明匿名化");
+});
+
+
+console.log("== 部署健壮性（云函数独立打包）==");
+const fs = require("fs");
+const path = require("path");
+
+t("70. 云函数不得跨目录 require（部署后必失败）", function () {
+  const root = path.join(__dirname, "..", "..", "cloudfunctions");
+  const offenders = [];
+  fs.readdirSync(root).forEach(function (dir) {
+    const p = path.join(root, dir, "index.js");
+    if (!fs.existsSync(p)) return;
+    const src = fs.readFileSync(p, "utf8");
+    if (src.indexOf('require("../') !== -1) offenders.push(dir);
+  });
+  assert(offenders.length === 0, "存在跨目录引用: " + offenders.join(","));
+});
+t("71. 复制的共享模块与源文件保持一致（防漂移）", function () {
+  const a = fs.readFileSync(path.join(__dirname, "..", "..", "cloudfunctions", "plan", "state.js"), "utf8");
+  const b = fs.readFileSync(path.join(__dirname, "..", "..", "cloudfunctions", "visitJob", "state.js"), "utf8");
+  // 忽略文件头注释与末尾导出行之外的差异：比较函数体与常量
+  const norm = function (s) {
+    return s.split("\n").filter(function (l) { return l.trim().indexOf("//") !== 0; }).join("\n").trim();
+  };
+  assert(norm(a) === norm(b), "plan/state.js 与 visitJob/state.js 已不一致，请同步");
+});
+
 console.log("");
 console.log("GOLDEN PASS: " + pass + " assertions");
 console.log(process.exitCode ? "GOLDEN FAILED" : "ALL GREEN");

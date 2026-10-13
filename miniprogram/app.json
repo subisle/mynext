@@ -4,7 +4,9 @@
     "pages/profile/profile",
     "pages/simulate/simulate",
     "pages/memory/memory",
-    "pages/survey/survey"
+    "pages/survey/survey",
+    "pages/history/history",
+    "pages/settings/settings"
   ],
   "window": {
     "backgroundTextStyle": "light",

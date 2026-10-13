@@ -2,6 +2,7 @@
 const cloud = require("wx-server-sdk");
 const https = require("https");
 const { SYSTEM_PROMPT, buildUserPrompt, validateOutput, sanitizeInput } = require("./engine.js");
+const { retryHint, isRetryable } = require("./retry.js");
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -60,8 +61,33 @@ async function loadLedger(openid) {
 }
 
 exports.main = async (event) => {
-  if (event.action !== "run") return { code: 40000, msg: "unknown action" };
   const { OPENID } = cloud.getWXContext();
+
+  // 推演历史：只返回摘要字段，避免一次拉回大量分支文本
+  if (event.action === "history") {
+    const got = await db.collection("simulations").where({ openid: OPENID })
+      .orderBy("createdAt", "desc").limit(30).get();
+    const fbs = await db.collection("actionFeedbacks").where({ openid: OPENID }).limit(200).get();
+    const fbMap = {};
+    fbs.data.forEach(function (f) { fbMap[f.topic] = f.status; });
+    const list = got.data.map(function (s) {
+      return {
+        id: s._id,
+        topic: s.topic,
+        createdAt: s.createdAt,
+        branchCount: (s.branches || []).length,
+        branchTitles: (s.branches || []).map(function (b) { return b.title; }),
+        factsUsed: (s.factsUsed || []).length,
+        injected: (s.injectedMemoryIds || []).length,
+        retried: !!s.retried,
+        promptVersion: s.promptVersion,
+        feedback: fbMap[s.topic] || null
+      };
+    });
+    return { code: 0, msg: "ok", data: { list: list } };
+  }
+
+  if (event.action !== "run") return { code: 40000, msg: "unknown action" };
 
   // 输入消毒：提示词注入防护
   const san = sanitizeInput(event.topic);
@@ -92,9 +118,22 @@ exports.main = async (event) => {
     return { code: 50001, msg: "推演服务繁忙，请稍后再试" };
   }
 
-  const v = validateOutput(raw, { redlines: ledger.redlines, knownFactIds: knownFactIds });
+  let v = validateOutput(raw, { redlines: ledger.redlines, knownFactIds: knownFactIds });
+  let retried = false;
+
+  // 校验失败 → 带修正指令重试一次（结构类与合规类均可重试）
+  if (!v.ok && isRetryable(v.reason)) {
+    retried = true;
+    const corrective = userPrompt + "\n\n【上一次输出不合格，请修正后重试】\n" + retryHint(v.reason, v.detail);
+    try {
+      const raw2 = await callLLM(SYSTEM_PROMPT, corrective);
+      const v2 = validateOutput(raw2, { redlines: ledger.redlines, knownFactIds: knownFactIds });
+      if (v2.ok) { v = v2; raw = raw2; } else { v = v2; }
+    } catch (e) { /* 重试失败则按首次结果返回 */ }
+  }
+
   if (!v.ok) {
-    return { code: 50002, msg: "推演结果未通过校验，请重试", debug: v.reason };
+    return { code: 50002, msg: "推演结果未通过校验，请重试", debug: v.reason, retried: retried };
   }
 
   // 可解释性留档：画像快照 + 注入的记忆 id + prompt/模型版本
@@ -107,7 +146,8 @@ exports.main = async (event) => {
       profileSnapshot: { basic: profile.basic, career: profile.career, goals: profile.goals },
       injectedMemoryIds: injectedMemoryIds,
       factsUsed: v.data.factsUsed || [],
-      promptVersion: "v1.3-adr0003-1",
+      promptVersion: "v1.5-adr0003-2",
+      retried: retried,
       model: process.env.LLM_MODEL || "deepseek-chat",
       branches: v.data.branches,
       createdAt: db.serverDate()

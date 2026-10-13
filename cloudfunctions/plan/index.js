@@ -1,11 +1,26 @@
 // cloudfunctions/plan/index.js - 反馈驱动的计划调整（回答"7 天没完成，你改了什么"）
 const cloud = require("wx-server-sdk");
 const { adjust, checkTone } = require("./adjust.js");
+const { shouldSuggestFreeze, buildFreezeState, isFrozen } = require("./state.js");
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext();
+  if (event.action === "state") {
+    const got = await db.collection("goalStates").where({ openid: OPENID }).limit(1).get();
+    const st = got.data[0] || null;
+    return { code: 0, msg: "ok", data: { state: st, frozen: isFrozen(st) } };
+  }
+
+  if (event.action === "resume") {
+    const got = await db.collection("goalStates").where({ openid: OPENID }).limit(1).get();
+    if (got.data.length) {
+      await db.collection("goalStates").doc(got.data[0]._id).update({ data: { frozen: false, resumedAt: db.serverDate() } });
+    }
+    return { code: 0, msg: "ok", data: { frozen: false } };
+  }
+
   if (event.action !== "adjust") return { code: 40000, msg: "unknown action" };
 
   const status = String(event.status || "");
@@ -19,6 +34,18 @@ exports.main = async (event) => {
   const missedStreak = (recent.data || []).length;
 
   const adj = adjust(status, weekAction, missedStreak);
+  // 冻结建议：连续未完成达阈值时，写入冻结状态（不再产生催促式提醒）
+  if (adj.detail && adj.detail.freezeSuggested && shouldSuggestFreeze(missedStreak)) {
+    const state = buildFreezeState(OPENID, adj.reason);
+    const got = await db.collection("goalStates").where({ openid: OPENID }).limit(1).get();
+    if (got.data.length === 0) {
+      await db.collection("goalStates").add({ data: Object.assign({}, state, { createdAt: db.serverDate() }) });
+    } else {
+      await db.collection("goalStates").doc(got.data[0]._id).update({ data: Object.assign({}, state, { updatedAt: db.serverDate() }) });
+    }
+    adj.frozen = true;
+    adj.frozenDays = state.days;
+  }
 
   // 话术门禁：任何文案不得出现说教措辞
   const tone = checkTone(adj.reason + " " + adj.actions.join(" "));

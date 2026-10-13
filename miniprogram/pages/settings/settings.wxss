@@ -1,0 +1,4 @@
+.section-title { font-weight:600; margin-bottom:8rpx; }
+.hint { font-size:24rpx; color:#999; line-height:1.7; }
+.reason { color:#333; margin-top:8rpx; font-size:26rpx; }
+.btn-danger { margin-top:20rpx; background:#ffeceb; color:#e5484d; border-radius:16rpx; font-size:32rpx; padding:22rpx 0; }

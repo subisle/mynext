@@ -1,6 +1,7 @@
 // cloudfunctions/visitJob/index.js - 每日回访与行动提醒（定时触发器）
 const cloud = require("wx-server-sdk");
 const { isQuietHour, dateKey, checkMessageTone } = require("./schedule.js");
+const { isFrozen } = require("./state.js");
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
@@ -31,12 +32,19 @@ exports.main = async (event) => {
     return { code: 0, msg: "quiet-hours-deferred", data: { deferred: true } };
   }
   const key = dateKey(now);
-  const results = { daily: 0, stale: 0, skipped: 0, failed: 0, toneBlocked: 0 };
+  const results = { daily: 0, stale: 0, skipped: 0, failed: 0, toneBlocked: 0, frozenSkipped: 0 };
+
+  // 冻结中的用户不接收任何行动提醒（避免把暂停变成压力）
+  async function frozen(openid) {
+    const got = await db.collection("goalStates").where({ openid: openid }).limit(1).get();
+    return isFrozen(got.data[0], now);
+  }
 
   // ① 每日回访
   const subs = await db.collection("subscriptions").where({ dailyVisit: true, authorized: true }).limit(200).get();
   for (const s of subs.data) {
     if (await alreadySent(s.openid, "daily", key)) { results.skipped++; continue; }
+    if (await frozen(s.openid)) { results.frozenSkipped++; continue; }
     const msg = "你给自己定的行动，今天做了吗？点开记一笔，没做我们就调小一点。";
     if (!checkMessageTone(msg).ok) { results.toneBlocked++; continue; }
     const sent = await send(s.openid, "daily", {
@@ -55,6 +63,7 @@ exports.main = async (event) => {
   for (const sim of sims.data) {
     const fb = await db.collection("actionFeedbacks").where({ openid: sim.openid, topic: sim.topic }).limit(1).get();
     if (fb.data.length > 0) continue;
+    if (await frozen(sim.openid)) { results.frozenSkipped++; continue; }
     if (await alreadySent(sim.openid, "stale7d", key)) { results.skipped++; continue; }
     const actionText = (sim.branches && sim.branches[0] && sim.branches[0].weekAction) || "上周的行动";
     const msg = "你给自己定的行动已经过去一周，做了就记一笔，没做我们就调小一点。";

@@ -1,6 +1,6 @@
 # MyNext 当前项目设计文档（v1.3 · 实施版）
 
-> 版本：v1.5 ｜ 日期：2026-10-13 ｜ 状态：**代码就绪待联调（金样例 56/56 PASS；仅缺 AppID / 云环境 / 密钥 / 主体资质）**
+> 版本：v1.6 ｜ 日期：2026-10-13 ｜ 状态：**代码就绪待联调（金样例 71/71 PASS；AppID 已配置，缺 LLM 密钥 / 模板 ID / 主体资质）**
 > v1.3 增量：回应严格评审——上线资格 P0 处置（ADR-0003）、事实账本、红线硬校验、提示词注入防护、反馈驱动计划调整、测试扩到 22 断言
 > 本文 = 当前唯一有效设计快照。文档优先级见第 2 节；与旧文档冲突时以本文为准。
 
@@ -225,3 +225,16 @@ L3 金样例回归 7 断言：合法放行 + 伪概率/股票/违法/路径数�
 | 埋点未接线 | profile_saved / simulation_completed / feedback_submitted / adjustment_generated / memory_corrected / memory_deleted / memory_summary_confirmed / survey_completed 全部接上 |
 
 **云函数清单（9 个）**：user、profile、memory、simulate、feedback、plan、survey、metrics、notify、visitJob（含定时触发器）。
+### 9.8 v1.6 增量（可用性、鲁棒性与合规收口）
+
+| 方向 | 交付 |
+|---|---|
+| 统一请求层 | `miniprogram/utils/cloud.js`：登录守卫、统一错误 toast、loading 管理、静默埋点助手；页面不再各写一套 |
+| 鲁棒性 | 推演输出未过校验时，**带具体修正指令自动重试一次**（`retry.js` 按原因生成指令），并记录 `retried` 标记；未知错误不盲目重试 |
+| 可追溯性可视化 | 新增「我的推演记录」页：每次推演的路径摘要、注入记忆条数、是否重试过、反馈状态 |
+| 目标冻结闭环 | `plan/state.js`：连续未完成达阈值写入冻结状态；冻结期内 visitJob **不发任何行动提醒**；到期自动解冻；设置页可手动恢复 |
+| 合规收口 | 新增 `account` 云函数：数据导出（剔除用户标识、带格式版本）+ 全部删除（覆盖 11 个集合、审计匿名化保留、二次确认与影响告知）；新增「设置与我的数据」页 |
+| 部署健壮性 | 修复 visitJob 跨目录 require（云函数独立打包会失败）；共享纯模块改为复制 + **一致性测试锁死**（测试 70/71） |
+
+**页面清单（7）**：首页 / 画像 / 推演 / 记忆本 / 问卷 / 推演记录 / 设置与我的数据。
+**云函数清单（11）**：user profile memory simulate feedback plan survey metrics notify account visitJob。
